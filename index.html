@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ansh Pro Editor</title>
+<style>
+:root{--bg:#0b0d14;--panel:#151925;--border:#292e40;--accent:#8b5cf6;--text:#f7f7fb;--muted:#a4acc0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{height:62px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:#11141e;border-bottom:1px solid var(--border);gap:10px}
+.logo{font-weight:800;font-size:19px}.logo span{color:#a78bfa}
+button,select,input{font:inherit}
+button{border:1px solid var(--border);background:#242a3a;color:white;border-radius:8px;padding:10px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+.primary{background:var(--accent);border-color:var(--accent);font-weight:bold}
+.layout{display:grid;grid-template-columns:190px minmax(0,1fr) 230px;gap:10px;padding:10px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:13px;min-width:0}
+h3{font-size:14px;margin:0 0 12px}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.tools button{display:block;width:100%;text-align:left;margin-bottom:8px}
+.preview{height:310px;display:flex;align-items:center;justify-content:center;background:#050609;border-radius:8px;overflow:hidden;position:relative}
+video{max-width:100%;max-height:100%}
+#overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:28px;font-weight:bold;text-align:center;text-shadow:0 2px 8px #000;pointer-events:none;max-width:90%;overflow-wrap:anywhere}
+#empty{color:#8b91a3;text-align:center;padding:20px}
+.controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.controls button{flex:1}
+.field{margin-bottom:15px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}
+input[type=text],input[type=number],select{width:100%;background:#0c0f18;color:white;border:1px solid var(--border);border-radius:7px;padding:9px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.timeline{margin:10px;padding:14px;background:var(--panel);border:1px solid var(--border);border-radius:12px}
+.track{height:43px;background:#0b0e16;border:1px solid var(--border);border-radius:7px;margin-top:8px;position:relative;overflow:hidden}
+.clip{height:100%;background:linear-gradient(90deg,#5140a7,#287b92);border-radius:5px;display:flex;align-items:center;padding:8px;font-size:12px;overflow:hidden;white-space:nowrap}
+audio{width:100%;margin-top:8px}
+#status{color:#a78bfa;font-size:12px;margin-top:10px;overflow-wrap:anywhere}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+@media(max-width:760px){
+ .layout{grid-template-columns:1fr}
+ .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .tools button{margin:0}
+ .preview{height:260px}
+ header{padding:10px}
+ .logo{font-size:16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🎬 Ansh <span>Pro Editor</span></div>
+  <button class="primary" id="exportBtn">⬇ Export Video</button>
+</header>
+
+<div class="layout">
+  <aside class="panel">
+    <h3>🧰 Editing Tools</h3>
+    <div class="tools">
+      <button id="uploadBtn">📁 Import Video</button>
+      <button id="musicBtn">🎵 Add Music</button>
+      <button id="textBtn">📝 Add Text</button>
+      <button id="trimBtn">✂ Apply Trim</button>
+      <button id="speedBtn">⚡ Apply Speed</button>
+      <button id="resetBtn">↺ Reset Preview</button>
+    </div>
+    <input type="file" id="videoFile" accept="video/*" hidden>
+    <input type="file" id="audioFile" accept="audio/*" hidden>
+    <p class="small">वीडियो और ऑडियो फाइलें अपने फोन से चुनें।</p>
+  </aside>
+
+  <main class="panel">
+    <h3>Preview Canvas</h3>
+    <div class="preview">
+      <video id="video" playsinline controls></video>
+      <div id="overlay"></div>
+      <div id="empty">अपना वीडियो अपलोड करें 🎞️</div>
+    </div>
+    <div class="controls">
+      <button id="playBtn">▶ Play</button>
+      <button id="pauseBtn">⏸ Pause</button>
+      <button id="backBtn">↶ -5s</button>
+      <button id="forwardBtn">+5s ↷</button>
+    </div>
+    <div class="field" style="margin-top:15px">
+      <label>Video Position</label>
+      <input id="seek" type="range" min="0" max="100" value="0">
+      <div class="small"><span id="current">0:00</span> / <span id="duration">0:00</span></div>
+    </div>
+    <div id="status">Ready — वीडियो अपलोड करके शुरू करें।</div>
+  </main>
+
+  <aside class="panel">
+    <h3>⚙️ Properties</h3>
+    <div class="field">
+      <label>Text Overlay</label>
+      <input id="textInput" type="text" placeholder="अपना टेक्स्ट लिखें">
+      <button id="applyText" style="margin-top:7px;width:100%">Apply Text</button>
+    </div>
+    <div class="field">
+      <label>Playback Speed</label>
+      <select id="speed">
+        <option value="0.25">0.25x Slow</option>
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1x Normal</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x Fast</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Brightness</label>
+      <input id="brightness" type="range" min="50" max="150" value="100">
+    </div>
+    <div class="field">
+      <label>Saturation</label>
+      <input id="saturation" type="range" min="0" max="200" value="100">
+    </div>
+    <div class="field">
+      <label>Trim Start (seconds)</label>
+      <input id="start" type="number" min="0" value="0">
+    </div>
+    <div class="field">
+      <label>Trim End (seconds)</label>
+      <input id="end" type="number" min="0" value="0">
+    </div>
+    <div class="field">
+      <label>Export Quality</label>
+      <select id="quality">
+        <option value="1280">720p HD</option>
+        <option value="1920">1080p Full HD</option>
+      </select>
+    </div>
+  </aside>
+</div>
+
+<section class="timeline">
+  <h3>🎞️ Timeline</h3>
+  <div class="small">VIDEO TRACK</div>
+  <div class="track"><div id="videoClip" class="clip" style="width:100%">Video — No file selected</div></div>
+  <div class="small" style="margin-top:10px">AUDIO TRACK</div>
+  <div class="track"><div id="audioClip" class="clip" style="width:0%;background:linear-gradient(90deg,#a16207,#d97706)">Audio</div></div>
+  <audio id="audio" controls hidden></audio>
+  <p class="small">यह शुरुआती एडिटर है। टाइमलाइन अभी विजुअल ट्रैक दिखाती है; यह पूर्ण मल्टी-क्लिप एडिटर नहीं है।</p>
+</section>
+
+<footer>© 2026 Ansh Pro Editor • Browser-based Video Tools</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const video=$('video'), audio=$('audio');
+let videoURL=null,audioURL=null,videoName='video';
+
+function status(s){$('status').textContent=s}
+function time(s){
+ if(!Number.isFinite(s))return '0:00';
+ return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')
+}
+function loadVideo(file){
+ if(!file)return;
+ if(!file.type.startsWith('video/')){status('कृपया वीडियो फाइल चुनें।');return}
+ if(videoURL)URL.revokeObjectURL(videoURL);
+ videoURL=URL.createObjectURL(file);videoName=file.name.replace(/\.[^.]+$/,'')||'video';
+ video.src=videoURL;video.load();
+ $('empty').hidden=true;$('videoClip').textContent=file.name;
+ status('वीडियो लोड हो रहा है…');
+}
+$('uploadBtn').onclick=()=>$('videoFile').click();
+$('videoFile').onchange=e=>loadVideo(e.target.files[0]);
+
+$('musicBtn').onclick=()=>$('audioFile').click();
+$('audioFile').onchange=e=>{
+ const file=e.target.files[0];if(!file)return;
+ if(!file.type.startsWith('audio/')){status('कृपया ऑडियो फाइल चुनें।');return}
+ if(audioURL)URL.revokeObjectURL(audioURL);
+ audioURL=URL.createObjectURL(file);audio.src=audioURL;audio.hidden=false;
+ $('audioClip').style.width='100%';$('audioClip').textContent=file.name;
+ status('ऑडियो लोड हो गया। Play/Pause अलग से कंट्रोल करें।')
+};
+
+video.onloadedmetadata=()=>{
+ $('duration').textContent=time(video.duration);
+ $('end').value=Math.floor(video.duration);
+ status('वीडियो तैयार है।');
+};
+video.ontimeupdate=()=>{
+ $('current').textContent=time(video.currentTime);
+ if(Number.isFinite(video.duration)&&video.duration>0)
+ $('seek').value=video.currentTime/video.duration*100;
+ const end=Number($('end').value);
+ if(end>0&&video.currentTime>=end&&!video.paused){
+ video.pause();video.currentTime=end;
+ }
+};
+video.onerror=()=>status('वीडियो नहीं खुला। दूसरी MP4 या WebM फाइल आजमाएँ।');
+$('playBtn').onclick=()=>{video.play().catch(()=>status('पहले वीडियो अपलोड करें।'));if(!audio.paused)audio.play().catch(()=>{})};
+$('pauseBtn').onclick=()=>{video.pause();audio.pause()};
+$('backBtn').onclick=()=>video.currentTime=Math.max(0,video.currentTime-5);
+$('forwardBtn').onclick=()=>video.currentTime=Math.min(video.duration||0,video.currentTime+5);
+$('seek').oninput=e=>{if(Number.isFinite(video.duration))video.currentTime=video.duration*e.target.value/100};
+
+$('applyText').onclick=()=>{
+ $('overlay').textContent=$('textInput').value;
+ status('टेक्स्ट प्रीव्यू पर लागू हुआ।')
+};
+$('textBtn').onclick=()=>{$('textInput').focus()};
+$('speedBtn').onclick=()=>{
+ video.playbackRate=Number($('speed').value);
+ status('प्रीव्यू स्पीड '+video.playbackRate+'x कर दी गई।')
+};
+$('speed').onchange=()=>video.playbackRate=Number($('speed').value);
+function filter(){
+ video.style.filter=`brightness(${$('brightness').value}%) saturate(${$('saturation').value}%)`;
+}
+$('brightness').oninput=filter;$('saturation').oninput=filter;
+
+$('trimBtn').onclick=()=>{
+ const s=Number($('start').value),e=Number($('end').value);
+ if(!videoURL){status('पहले वीडियो अपलोड करें।');return}
+ if(s<0||e<=s||e>video.duration){
+ status('सही Trim Start और Trim End डालें।');return
+ }
+ video.currentTime=s;
+ status('ट्रिम रेंज '+time(s)+' से '+time(e)+' तक चुनी गई। Export में यह रेंज इस्तेमाल होगी।')
+};
+$('resetBtn').onclick=()=>{
+ video.pause();video.playbackRate=1;video.style.filter='none';
+ $('speed').value='1';$('brightness').value=100;$('saturation').value=100;
+ $('overlay').textContent='';$('textInput').value='';
+ $('start').value=0;$('end').value=Number.isFinite(video.duration)?Math.floor(video.duration):0;
+ status('प्रीव्यू सेटिंग्स रीसेट हुईं।')
+};
+
+function canvasExport(){
+ if(!videoURL){status('पहले वीडियो अपलोड करें।');return}
+ if(!('captureStream' in HTMLCanvasElement.prototype)||!window.MediaRecorder){
+ status('इस ब्राउज़र में Canvas वीडियो एक्सपोर्ट सपोर्ट नहीं है।');return
+ }
+ const start=Number($('start').value),end=Number($('end').value);
+ if(!Number.isFinite(video.duration)||start<0||end<=start||end>video.duration){
+ status('एक सही Trim Start और End चुनें।');return
+ }
+ const height=Number($('quality').value);
+ const ratio=video.videoWidth/video.videoHeight||16/9;
+ const width=Math.round(height*ratio);
+ const canvas=document.createElement('canvas');
+ canvas.width=width;canvas.height=height;
+ const ctx=canvas.getContext('2d');
+ const stream=canvas.captureStream(30);
+ let audioContext=null,source=null,audioSource=null;
+ try{
+ audioContext=new(window.AudioContext||window.webkitAudioContext)();
+ const dest=audioContext.createMediaStreamDestination();
+ source=audioContext.createMediaElementSource(video);
+ source.connect(dest);source.connect(audioContext.destination);
+ stream.addTrack(dest.stream.getAudioTracks()[0]);
+ if(audioURL){
+ audioSource=audioContext.createMediaElementSource(audio);
+ audioSource.connect(dest);audioSource.connect(audioContext.destination);
+ }
+ }catch(err){console.warn('Audio export unavailable',err)}
+ let mime='video/webm';
+ if(MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus'))mime='video/webm;codecs=vp9,opus';
+ else if(MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus'))mime='video/webm;codecs=vp8,opus';
+ else if(!MediaRecorder.isTypeSupported(mime)){
+ status('यह ब्राउज़र वीडियो रिकॉर्डिंग सपोर्ट नहीं करता।');return
+ }
+ let recorder;
+ try{recorder=new MediaRecorder(stream,{mimeType:mime})}
+ catch(e){status('रिकॉर्डर शुरू नहीं हो सका: '+e.message);return}
+ const chunks=[];
+ recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+ recorder.onerror=()=>status('वीडियो एक्सपोर्ट में त्रुटि हुई।');
+ recorder.onstop=()=>{
+ cancelAnimationFrame(frame);
+ const blob=new Blob(chunks,{type:mime});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;
+ a.download=videoName+'-'+height+'p.webm';a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ video.pause();audio.pause();
+ if(audioContext)audioContext.close().catch(()=>{});
+ status('एक्सपोर्ट पूरा! डाउनलोड की गई फाइल WebM है।')
+ };
+ let frame;
+ function draw(){
+ ctx.filter=`brightness(${$('brightness').value}%) saturate(${$('saturation').value}%)`;
+ ctx.drawImage(video,0,0,width,height);
+ ctx.filter='none';
+ const text=$('overlay').textContent;
+ if(text){
+ ctx.font=`bold ${Math.max(22,height*.045)}px Arial`;
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.lineWidth=Math.max(2,height*.004);ctx.strokeStyle='#000';
+ ctx.fillStyle='#fff';ctx.strokeText(text,width/2,height/2,width*.9);
+ ctx.fillText(text,width/2,height/2,width*.9);
+ }
+ if(video.currentTime>=end||video.paused){
+ if(recorder.state==='recording')recorder.stop();
+ return
+ }
+ frame=requestAnimationFrame(draw);
+ }
+ video.pause();audio.pause();video.currentTime=start;
+ status('एक्सपोर्ट चल रहा है। टैब खुला रखें…');
+ video.onseeked=async function handler(){
+ video.removeEventListener('seeked',handler);
+ try{
+ if(audioContext)await audioContext.resume();
+ if(audioURL){audio.currentTime=Math.max(0,start);await audio.play().catch(()=>{})}
+ await video.play();
+ recorder.start(250);draw();
+ }catch(e){
+ status('एक्सपोर्ट शुरू नहीं हो सका: '+e.message);
+ if(recorder.state==='recording')recorder.stop();
+ }
+ };
+ video.addEventListener('seeked',video.onseeked,{once:true});
+}
+$('exportBtn').onclick=canvasExport;
+</script>
+</body>
+  </html>
